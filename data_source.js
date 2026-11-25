@@ -1,21 +1,38 @@
-const fs = require('node:fs');
 const path = require('node:path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const filePath = path.join(__dirname, 'database.json');
+const { MongoClient } = require('mongodb');
 
-function load() {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch (err) {
-    if (err.code == 'ENOENT') return { nextId: 1, products: [] };
-    throw err;
-  }
+let client = null;
+let db = null;
+
+// Gọi 1 lần lúc khởi động server, trước khi listen
+async function connect() {
+  if (db) return db;
+
+  const uri = process.env.MONGODB_URI;
+  const dbName = process.env.MONGODB_DB;
+
+  if (!uri) throw new Error('MONGODB_URI is not set in the .env file');
+  if (!dbName) throw new Error('MONGODB_DB is not set in the .env file');
+
+  client = new MongoClient(uri);
+  await client.connect();
+  db = client.db(dbName);
+
+  return db;
 }
 
-function save(data) {
-  const tmp = filePath + 'tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
-  fs.renameSync(tmp, filePath);
+// Dùng trong repository: lấy handle đã kết nối
+function getDb() {
+  if (!db) throw new Error('Database is not connected. Call connect() first.');
+  return db;
 }
 
-module.exports = { load, save };
+async function close() {
+  if (client) await client.close();
+  client = null;
+  db = null;
+}
+
+module.exports = { connect, getDb, close };
