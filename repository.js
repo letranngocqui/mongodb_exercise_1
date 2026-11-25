@@ -1,9 +1,11 @@
 const { getDb } = require('./data_source');
 // Không bao giờ trả _id ra client
 const PROJECTION = { _id: 0 };
+
 function products() {
   return getDb().collection('products');
 }
+
 // GET /products, GET /products?limit=n
 async function findAll(limit) {
   const cursor = products().find({}, { projection: PROJECTION }).sort({ id: 1 });
@@ -11,10 +13,12 @@ async function findAll(limit) {
   if (limit === 0) return [];  // .limit(0) trong Mongo = KHÔNG giới hạn
   return cursor.limit(limit).toArray();
 }
+
 async function findById(id) {
   if (!Number.isInteger(id)) return null;
   return products().findOne({ id }, { projection: PROJECTION });
 }
+
 // Bộ đếm id tự tăng, atomic
 async function nextId() {
   const counter = await getDb()
@@ -26,12 +30,14 @@ async function nextId() {
     );
   return counter.seq;
 }
+
 // POST
 async function create(fields) {
   const product = { id: await nextId(), ...fields };
   await products().insertOne({ ...product });   // spread: insertOne gắn _id vào object gốc
   return product;
 }
+
 // PUT
 async function replace(id, fields) {
   if (!Number.isInteger(id)) return null;
@@ -40,6 +46,7 @@ async function replace(id, fields) {
   if (result.matchedCount === 0) return null;
   return doc;
 }
+
 // PATCH
 async function update(id, fields) {
   if (!Number.isInteger(id)) return null;
@@ -50,6 +57,7 @@ async function update(id, fields) {
   );
   return result ?? null;
 }
+
 // DELETE
 async function remove(id) {
   if (!Number.isInteger(id)) return null;
